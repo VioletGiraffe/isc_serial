@@ -180,6 +180,8 @@ public:
 protected:
   void reconfigurePort ();
 
+  void clearErrors();
+
 private:
   wstring port_;               // Path to the file descriptor
   HANDLE fd_;

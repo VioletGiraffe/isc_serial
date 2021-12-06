@@ -2,6 +2,8 @@
 
 /* Copyright 2012 William Woodall and John Harrison */
 
+#include <assert.h>
+#include <codecvt>
 #include <sstream>
 
 #include "serial/impl/win.h"
@@ -23,8 +25,8 @@ using serial::IOException;
 inline wstring
 _prefix_port_if_needed(const wstring &input)
 {
-  static wstring windows_com_port_prefix = L"\\\\.\\";
-  if (input.compare(0, windows_com_port_prefix.size(), windows_com_port_prefix) != 0)
+  static const wstring windows_com_port_prefix = L"\\\\.\\";
+  if (input.compare(windows_com_port_prefix) != 0)
   {
     return windows_com_port_prefix + input;
   }
@@ -89,6 +91,8 @@ Serial::SerialImpl::open ()
 
   reconfigurePort();
   is_open_ = true;
+
+  clearErrors();
 }
 
 void
@@ -279,6 +283,8 @@ Serial::SerialImpl::close ()
 {
   if (is_open_ == true) {
     if (fd_ != INVALID_HANDLE_VALUE) {
+      clearErrors();
+
       int ret;
       ret = CloseHandle(fd_);
       if (ret == 0) {
@@ -366,7 +372,7 @@ Serial::SerialImpl::setPort (const string &port)
 string
 Serial::SerialImpl::getPort () const
 {
-  return string(port_.begin(), port_.end());
+    return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{}.to_bytes(port_);
 }
 
 void
@@ -641,6 +647,18 @@ Serial::SerialImpl::writeUnlock()
     THROW (IOException, "Error releasing write mutex.");
   }
 }
+
+void Serial::SerialImpl::clearErrors()
+{
+    DWORD errors = 0;
+    auto success = ClearCommError(fd_, &errors, nullptr);
+    assert(success);
+
+    success = ClearCommBreak(fd_);
+    assert(success);
+    (void)success;
+}
+
 
 #endif // #if defined(_WIN32)
 
