@@ -49,7 +49,7 @@ inline wstring
 _prefix_port_if_needed(const wstring &input)
 {
   static const wstring windows_com_port_prefix = L"\\\\.\\";
-  if (input.compare(windows_com_port_prefix) != 0)
+  if (input.find(windows_com_port_prefix) != 0)
   {
     return windows_com_port_prefix + input;
   }
@@ -90,16 +90,29 @@ Serial::SerialImpl::open ()
   // See: https://github.com/wjwwood/serial/issues/84
   wstring port_with_prefix = _prefix_port_if_needed(port_);
   LPCWSTR lp_port = port_with_prefix.c_str();
-  fd_ = CreateFileW(lp_port,
-                    GENERIC_READ | GENERIC_WRITE,
-                    0,
-                    0,
-                    OPEN_EXISTING,
-                    FILE_ATTRIBUTE_NORMAL,
-                    0);
+
+  DWORD create_file_err = 0;
+  for (int i = 0; i < 5; ++i) {
+      if (i != 0)
+          Sleep(250);
+
+      fd_ = CreateFileW(lp_port,
+          GENERIC_READ | GENERIC_WRITE,
+          0,
+          nullptr,
+          OPEN_EXISTING,
+          FILE_ATTRIBUTE_NORMAL,
+          nullptr);
+
+      // If there is an error and it is ERROR_ACCESS_DENIED, try again a couple times
+      if (fd_ != INVALID_HANDLE_VALUE) {
+          create_file_err = GetLastError();
+          if (create_file_err != ERROR_ACCESS_DENIED)
+            break;
+      }
+  }
 
   if (fd_ == INVALID_HANDLE_VALUE) {
-    DWORD create_file_err = GetLastError();
     switch (create_file_err) {
     case ERROR_FILE_NOT_FOUND:
       // Use this->getPort to convert to a std::string
@@ -357,6 +370,7 @@ Serial::SerialImpl::read (uint8_t *buf, size_t size)
   }
   DWORD bytes_read;
   if (!ReadFile(fd_, buf, static_cast<DWORD>(size), &bytes_read, NULL)) {
+    clearErrors();
     THROW (IOException, "Error while reading from the serial port: " + errorMessageFromErrorCode(GetLastError()));
   }
   return (size_t) (bytes_read);
@@ -370,6 +384,7 @@ Serial::SerialImpl::write (const uint8_t *data, size_t length)
   }
   DWORD bytes_written;
   if (!WriteFile(fd_, data, static_cast<DWORD>(length), &bytes_written, NULL)) {
+    clearErrors();
     THROW (IOException, "Error while writing to the serial port: " + errorMessageFromErrorCode(GetLastError()));
   }
   return (size_t) (bytes_written);
