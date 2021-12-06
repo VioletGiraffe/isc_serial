@@ -709,13 +709,17 @@ public:
       ss << ", file " << file_ << ", line " << line_ << ".";
       e_what_ = ss.str();
   }
-  explicit IOException (std::string file, int line, const char * description)
+  explicit IOException (std::string file, int line, const std::string& description)
     : file_(file), line_(line), errno_(0) {
       std::stringstream ss;
       ss << "IO Exception: " << description;
       ss << ", file " << file_ << ", line " << line_ << ".";
       e_what_ = ss.str();
   }
+  explicit IOException(std::string file, int line, const char* description)
+      : IOException(std::move(file), line, std::string(description))
+  {}
+ 
   virtual ~IOException() throw() {}
   IOException (const IOException& other) : line_(other.line_), e_what_(other.e_what_), errno_(other.errno_) {}
 

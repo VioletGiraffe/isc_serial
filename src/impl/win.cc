@@ -4,13 +4,11 @@
 
 #include <assert.h>
 #include <codecvt>
-#include <sstream>
 
 #include "serial/impl/win.h"
 
 using std::string;
 using std::wstring;
-using std::stringstream;
 using std::invalid_argument;
 using serial::Serial;
 using serial::Timeout;
@@ -21,6 +19,31 @@ using serial::flowcontrol_t;
 using serial::SerialException;
 using serial::PortNotOpenedException;
 using serial::IOException;
+
+static std::string errorMessageFromErrorCode(unsigned long errorCode)
+{
+    WCHAR* lpMsgBuf = nullptr;
+    if (FormatMessageW(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        errorCode,
+        MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
+        (LPWSTR)&lpMsgBuf,
+        0, nullptr) > 0)
+    {
+        char utf8[256];
+        const auto nChars = WideCharToMultiByte(CP_UTF8, 0, lpMsgBuf, -1, utf8, static_cast<int>(std::size(utf8)), nullptr, nullptr);
+        LocalFree(lpMsgBuf);
+        if (nChars > 1)
+            return std::string(utf8, static_cast<size_t>(nChars) - 1);
+        else
+            return {};
+    }
+    else
+        return {};
+}
 
 inline wstring
 _prefix_port_if_needed(const wstring &input)
@@ -77,15 +100,12 @@ Serial::SerialImpl::open ()
 
   if (fd_ == INVALID_HANDLE_VALUE) {
     DWORD create_file_err = GetLastError();
-	stringstream ss;
     switch (create_file_err) {
     case ERROR_FILE_NOT_FOUND:
       // Use this->getPort to convert to a std::string
-      ss << "Specified port, " << this->getPort() << ", does not exist.";
-      THROW (IOException, ss.str().c_str());
+      THROW (IOException, "Specified port, " + this->getPort() + ", does not exist.");
     default:
-      ss << "Unknown error opening the serial port: " << create_file_err;
-      THROW (IOException, ss.str().c_str());
+      THROW (IOException, "Error opening the serial port: " + errorMessageFromErrorCode(create_file_err));
     }
   }
 
@@ -288,9 +308,7 @@ Serial::SerialImpl::close ()
       int ret;
       ret = CloseHandle(fd_);
       if (ret == 0) {
-        stringstream ss;
-        ss << "Error while closing serial port: " << GetLastError();
-        THROW (IOException, ss.str().c_str());
+        THROW (IOException, "Error while closing serial port: " + errorMessageFromErrorCode(GetLastError()));
       } else {
         fd_ = INVALID_HANDLE_VALUE;
       }
@@ -313,9 +331,7 @@ Serial::SerialImpl::available ()
   }
   COMSTAT cs;
   if (!ClearCommError(fd_, NULL, &cs)) {
-    stringstream ss;
-    ss << "Error while checking status of the serial port: " << GetLastError();
-    THROW (IOException, ss.str().c_str());
+    THROW (IOException, "Error while checking status of the serial port: " + errorMessageFromErrorCode(GetLastError()));
   }
   return static_cast<size_t>(cs.cbInQue);
 }
@@ -341,9 +357,7 @@ Serial::SerialImpl::read (uint8_t *buf, size_t size)
   }
   DWORD bytes_read;
   if (!ReadFile(fd_, buf, static_cast<DWORD>(size), &bytes_read, NULL)) {
-    stringstream ss;
-    ss << "Error while reading from the serial port: " << GetLastError();
-    THROW (IOException, ss.str().c_str());
+    THROW (IOException, "Error while reading from the serial port: " + errorMessageFromErrorCode(GetLastError()));
   }
   return (size_t) (bytes_read);
 }
@@ -356,9 +370,7 @@ Serial::SerialImpl::write (const uint8_t *data, size_t length)
   }
   DWORD bytes_written;
   if (!WriteFile(fd_, data, static_cast<DWORD>(length), &bytes_written, NULL)) {
-    stringstream ss;
-    ss << "Error while writing to the serial port: " << GetLastError();
-    THROW (IOException, ss.str().c_str());
+    THROW (IOException, "Error while writing to the serial port: " + errorMessageFromErrorCode(GetLastError()));
   }
   return (size_t) (bytes_written);
 }
