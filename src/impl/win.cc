@@ -22,27 +22,27 @@ using serial::IOException;
 
 static std::string errorMessageFromErrorCode(unsigned long errorCode)
 {
-    WCHAR* lpMsgBuf = nullptr;
-    if (FormatMessageW(
-        FORMAT_MESSAGE_ALLOCATE_BUFFER |
-        FORMAT_MESSAGE_FROM_SYSTEM |
-        FORMAT_MESSAGE_IGNORE_INSERTS,
-        nullptr,
-        errorCode,
-        MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
-        (LPWSTR)&lpMsgBuf,
-        0, nullptr) > 0)
-    {
-        char utf8[256];
-        const auto nChars = WideCharToMultiByte(CP_UTF8, 0, lpMsgBuf, -1, utf8, static_cast<int>(std::size(utf8)), nullptr, nullptr);
-        LocalFree(lpMsgBuf);
-        if (nChars > 1)
-            return std::string(utf8, static_cast<size_t>(nChars) - 1);
-        else
-            return {};
-    }
-    else
-        return {};
+	WCHAR* lpMsgBuf = nullptr;
+	if (FormatMessageW(
+		FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		FORMAT_MESSAGE_FROM_SYSTEM |
+		FORMAT_MESSAGE_IGNORE_INSERTS,
+		nullptr,
+		errorCode,
+		MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT),
+		(LPWSTR)&lpMsgBuf,
+		0, nullptr) > 0)
+	{
+		char utf8[256];
+		const auto nChars = WideCharToMultiByte(CP_UTF8, 0, lpMsgBuf, -1, utf8, static_cast<int>(std::size(utf8)), nullptr, nullptr);
+		LocalFree(lpMsgBuf);
+		if (nChars > 1)
+			return std::string(utf8, static_cast<size_t>(nChars) - 1);
+		else
+			return {};
+	}
+	else
+		return {};
 }
 
 inline wstring
@@ -51,21 +51,21 @@ _prefix_port_if_needed(const wstring &input)
   static const wstring windows_com_port_prefix = L"\\\\.\\";
   if (input.find(windows_com_port_prefix) != 0)
   {
-    return windows_com_port_prefix + input;
+	return windows_com_port_prefix + input;
   }
   return input;
 }
 
 Serial::SerialImpl::SerialImpl (const string &port, unsigned long baudrate,
-                                bytesize_t bytesize,
-                                parity_t parity, stopbits_t stopbits,
-                                flowcontrol_t flowcontrol)
+								bytesize_t bytesize,
+								parity_t parity, stopbits_t stopbits,
+								flowcontrol_t flowcontrol)
   : port_ (port.begin(), port.end()), fd_ (INVALID_HANDLE_VALUE), is_open_ (false),
-    baudrate_ (baudrate), parity_ (parity),
-    bytesize_ (bytesize), stopbits_ (stopbits), flowcontrol_ (flowcontrol)
+	baudrate_ (baudrate), parity_ (parity),
+	bytesize_ (bytesize), stopbits_ (stopbits), flowcontrol_ (flowcontrol)
 {
   if (port_.empty () == false)
-    open ();
+	open ();
   read_mutex = CreateMutex(NULL, false, NULL);
   write_mutex = CreateMutex(NULL, false, NULL);
 }
@@ -81,10 +81,10 @@ void
 Serial::SerialImpl::open ()
 {
   if (port_.empty ()) {
-    throw invalid_argument ("Empty port is invalid.");
+	throw invalid_argument ("Empty port is invalid.");
   }
   if (is_open_ == true) {
-    throw SerialException ("Serial port already open.");
+	throw SerialException ("Serial port already open.");
   }
 
   // See: https://github.com/wjwwood/serial/issues/84
@@ -93,33 +93,33 @@ Serial::SerialImpl::open ()
 
   DWORD create_file_err = 0;
   for (int i = 0; i < 5; ++i) {
-      if (i != 0)
-          Sleep(250);
+	  if (i != 0)
+		  Sleep(250);
 
-      fd_ = CreateFileW(lp_port,
-          GENERIC_READ | GENERIC_WRITE,
-          0,
-          nullptr,
-          OPEN_EXISTING,
-          FILE_ATTRIBUTE_NORMAL,
-          nullptr);
+	  fd_ = CreateFileW(lp_port,
+		  GENERIC_READ | GENERIC_WRITE,
+		  0,
+		  nullptr,
+		  OPEN_EXISTING,
+		  FILE_ATTRIBUTE_NORMAL,
+		  nullptr);
 
-      // If there is an error and it is ERROR_ACCESS_DENIED, try again a couple times
-      if (fd_ != INVALID_HANDLE_VALUE) {
-          create_file_err = GetLastError();
-          if (create_file_err != ERROR_ACCESS_DENIED)
-            break;
-      }
+	  // If there is an error and it is ERROR_ACCESS_DENIED, try again a couple times
+	  if (fd_ != INVALID_HANDLE_VALUE) {
+		  create_file_err = GetLastError();
+		  if (create_file_err != ERROR_ACCESS_DENIED)
+			break;
+	  }
   }
 
   if (fd_ == INVALID_HANDLE_VALUE) {
-    switch (create_file_err) {
-    case ERROR_FILE_NOT_FOUND:
-      // Use this->getPort to convert to a std::string
-      THROW (IOException, "Specified port, " + this->getPort() + ", does not exist.");
-    default:
-      THROW (IOException, "Error opening the serial port: " + errorMessageFromErrorCode(create_file_err));
-    }
+	switch (create_file_err) {
+	case ERROR_FILE_NOT_FOUND:
+	  // Use this->getPort to convert to a std::string
+	  THROW (IOException, "Specified port, " + this->getPort() + ", does not exist.");
+	default:
+	  THROW (IOException, "Error opening the serial port: " + errorMessageFromErrorCode(create_file_err));
+	}
   }
 
   reconfigurePort();
@@ -132,8 +132,8 @@ void
 Serial::SerialImpl::reconfigurePort ()
 {
   if (fd_ == INVALID_HANDLE_VALUE) {
-    // Can only operate on a valid file descriptor
-    THROW (IOException, "Invalid file descriptor, is the serial port open?");
+	// Can only operate on a valid file descriptor
+	THROW (IOException, "Invalid file descriptor, is the serial port open?");
   }
 
   DCB dcbSerialParams = {0};
@@ -141,8 +141,8 @@ Serial::SerialImpl::reconfigurePort ()
   dcbSerialParams.DCBlength=sizeof(dcbSerialParams);
 
   if (!GetCommState(fd_, &dcbSerialParams)) {
-    //error getting state
-    THROW (IOException, "Error getting the serial port state.");
+	//error getting state
+	THROW (IOException, "Error getting the serial port state.");
   }
 
   // setup baud rate
@@ -232,71 +232,71 @@ Serial::SerialImpl::reconfigurePort ()
   case 921600: dcbSerialParams.BaudRate = CBR_921600; break;
 #endif
   default:
-    // Try to blindly assign it
-    dcbSerialParams.BaudRate = baudrate_;
+	// Try to blindly assign it
+	dcbSerialParams.BaudRate = baudrate_;
   }
 
   // setup char len
   if (bytesize_ == eightbits)
-    dcbSerialParams.ByteSize = 8;
+	dcbSerialParams.ByteSize = 8;
   else if (bytesize_ == sevenbits)
-    dcbSerialParams.ByteSize = 7;
+	dcbSerialParams.ByteSize = 7;
   else if (bytesize_ == sixbits)
-    dcbSerialParams.ByteSize = 6;
+	dcbSerialParams.ByteSize = 6;
   else if (bytesize_ == fivebits)
-    dcbSerialParams.ByteSize = 5;
+	dcbSerialParams.ByteSize = 5;
   else
-    throw invalid_argument ("invalid char len");
+	throw invalid_argument ("invalid char len");
 
   // setup stopbits
   if (stopbits_ == stopbits_one)
-    dcbSerialParams.StopBits = ONESTOPBIT;
+	dcbSerialParams.StopBits = ONESTOPBIT;
   else if (stopbits_ == stopbits_one_point_five)
-    dcbSerialParams.StopBits = ONE5STOPBITS;
+	dcbSerialParams.StopBits = ONE5STOPBITS;
   else if (stopbits_ == stopbits_two)
-    dcbSerialParams.StopBits = TWOSTOPBITS;
+	dcbSerialParams.StopBits = TWOSTOPBITS;
   else
-    throw invalid_argument ("invalid stop bit");
+	throw invalid_argument ("invalid stop bit");
 
   // setup parity
   if (parity_ == parity_none) {
-    dcbSerialParams.Parity = NOPARITY;
+	dcbSerialParams.Parity = NOPARITY;
   } else if (parity_ == parity_even) {
-    dcbSerialParams.Parity = EVENPARITY;
+	dcbSerialParams.Parity = EVENPARITY;
   } else if (parity_ == parity_odd) {
-    dcbSerialParams.Parity = ODDPARITY;
+	dcbSerialParams.Parity = ODDPARITY;
   } else if (parity_ == parity_mark) {
-    dcbSerialParams.Parity = MARKPARITY;
+	dcbSerialParams.Parity = MARKPARITY;
   } else if (parity_ == parity_space) {
-    dcbSerialParams.Parity = SPACEPARITY;
+	dcbSerialParams.Parity = SPACEPARITY;
   } else {
-    throw invalid_argument ("invalid parity");
+	throw invalid_argument ("invalid parity");
   }
 
   // setup flowcontrol
   if (flowcontrol_ == flowcontrol_none) {
-    dcbSerialParams.fOutxCtsFlow = false;
-    dcbSerialParams.fRtsControl = RTS_CONTROL_DISABLE;
-    dcbSerialParams.fOutX = false;
-    dcbSerialParams.fInX = false;
+	dcbSerialParams.fOutxCtsFlow = false;
+	dcbSerialParams.fRtsControl = RTS_CONTROL_DISABLE;
+	dcbSerialParams.fOutX = false;
+	dcbSerialParams.fInX = false;
   }
   if (flowcontrol_ == flowcontrol_software) {
-    dcbSerialParams.fOutxCtsFlow = false;
-    dcbSerialParams.fRtsControl = RTS_CONTROL_DISABLE;
-    dcbSerialParams.fOutX = true;
-    dcbSerialParams.fInX = true;
+	dcbSerialParams.fOutxCtsFlow = false;
+	dcbSerialParams.fRtsControl = RTS_CONTROL_DISABLE;
+	dcbSerialParams.fOutX = true;
+	dcbSerialParams.fInX = true;
   }
   if (flowcontrol_ == flowcontrol_hardware) {
-    dcbSerialParams.fOutxCtsFlow = true;
-    dcbSerialParams.fRtsControl = RTS_CONTROL_HANDSHAKE;
-    dcbSerialParams.fOutX = false;
-    dcbSerialParams.fInX = false;
+	dcbSerialParams.fOutxCtsFlow = true;
+	dcbSerialParams.fRtsControl = RTS_CONTROL_HANDSHAKE;
+	dcbSerialParams.fOutX = false;
+	dcbSerialParams.fInX = false;
   }
 
   // activate settings
   if (!SetCommState(fd_, &dcbSerialParams)){
-    CloseHandle(fd_);
-    THROW (IOException, "Error setting serial port settings.");
+	CloseHandle(fd_);
+	THROW (IOException, "Error setting serial port settings.");
   }
 
   // Setup timeouts
@@ -307,7 +307,7 @@ Serial::SerialImpl::reconfigurePort ()
   timeouts.WriteTotalTimeoutConstant = timeout_.write_timeout_constant;
   timeouts.WriteTotalTimeoutMultiplier = timeout_.write_timeout_multiplier;
   if (!SetCommTimeouts(fd_, &timeouts)) {
-    THROW (IOException, "Error setting timeouts.");
+	THROW (IOException, "Error setting timeouts.");
   }
 }
 
@@ -315,18 +315,18 @@ void
 Serial::SerialImpl::close ()
 {
   if (is_open_ == true) {
-    if (fd_ != INVALID_HANDLE_VALUE) {
-      clearErrors();
+	if (fd_ != INVALID_HANDLE_VALUE) {
+	  clearErrors();
 
-      int ret;
-      ret = CloseHandle(fd_);
-      if (ret == 0) {
-        THROW (IOException, "Error while closing serial port: " + errorMessageFromErrorCode(GetLastError()));
-      } else {
-        fd_ = INVALID_HANDLE_VALUE;
-      }
-    }
-    is_open_ = false;
+	  int ret;
+	  ret = CloseHandle(fd_);
+	  if (ret == 0) {
+		THROW (IOException, "Error while closing serial port: " + errorMessageFromErrorCode(GetLastError()));
+	  } else {
+		fd_ = INVALID_HANDLE_VALUE;
+	  }
+	}
+	is_open_ = false;
   }
 }
 
@@ -340,11 +340,11 @@ size_t
 Serial::SerialImpl::available ()
 {
   if (!is_open_) {
-    return 0;
+	return 0;
   }
   COMSTAT cs;
   if (!ClearCommError(fd_, NULL, &cs)) {
-    THROW (IOException, "Error while checking status of the serial port: " + errorMessageFromErrorCode(GetLastError()));
+	THROW (IOException, "Error while checking status of the serial port: " + errorMessageFromErrorCode(GetLastError()));
   }
   return static_cast<size_t>(cs.cbInQue);
 }
@@ -366,12 +366,12 @@ size_t
 Serial::SerialImpl::read (uint8_t *buf, size_t size)
 {
   if (!is_open_) {
-    throw PortNotOpenedException ("Serial::read");
+	throw PortNotOpenedException ("Serial::read");
   }
   DWORD bytes_read;
   if (!ReadFile(fd_, buf, static_cast<DWORD>(size), &bytes_read, NULL)) {
-    clearErrors();
-    THROW (IOException, "Error while reading from the serial port: " + errorMessageFromErrorCode(GetLastError()));
+	clearErrors();
+	THROW (IOException, "Error while reading from the serial port: " + errorMessageFromErrorCode(GetLastError()));
   }
   return (size_t) (bytes_read);
 }
@@ -380,12 +380,12 @@ size_t
 Serial::SerialImpl::write (const uint8_t *data, size_t length)
 {
   if (is_open_ == false) {
-    throw PortNotOpenedException ("Serial::write");
+	throw PortNotOpenedException ("Serial::write");
   }
   DWORD bytes_written;
   if (!WriteFile(fd_, data, static_cast<DWORD>(length), &bytes_written, NULL)) {
-    clearErrors();
-    THROW (IOException, "Error while writing to the serial port: " + errorMessageFromErrorCode(GetLastError()));
+	clearErrors();
+	THROW (IOException, "Error while writing to the serial port: " + errorMessageFromErrorCode(GetLastError()));
   }
   return (size_t) (bytes_written);
 }
@@ -399,7 +399,7 @@ Serial::SerialImpl::setPort (const string &port)
 string
 Serial::SerialImpl::getPort () const
 {
-    return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{}.to_bytes(port_);
+	return std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t>{}.to_bytes(port_);
 }
 
 void
@@ -407,7 +407,7 @@ Serial::SerialImpl::setTimeout (serial::Timeout &timeout)
 {
   timeout_ = timeout;
   if (is_open_) {
-    reconfigurePort ();
+	reconfigurePort ();
   }
 }
 
@@ -422,7 +422,7 @@ Serial::SerialImpl::setBaudrate (unsigned long baudrate)
 {
   baudrate_ = baudrate;
   if (is_open_) {
-    reconfigurePort ();
+	reconfigurePort ();
   }
 }
 
@@ -437,7 +437,7 @@ Serial::SerialImpl::setBytesize (serial::bytesize_t bytesize)
 {
   bytesize_ = bytesize;
   if (is_open_) {
-    reconfigurePort ();
+	reconfigurePort ();
   }
 }
 
@@ -452,7 +452,7 @@ Serial::SerialImpl::setParity (serial::parity_t parity)
 {
   parity_ = parity;
   if (is_open_) {
-    reconfigurePort ();
+	reconfigurePort ();
   }
 }
 
@@ -467,7 +467,7 @@ Serial::SerialImpl::setStopbits (serial::stopbits_t stopbits)
 {
   stopbits_ = stopbits;
   if (is_open_) {
-    reconfigurePort ();
+	reconfigurePort ();
   }
 }
 
@@ -482,7 +482,7 @@ Serial::SerialImpl::setFlowcontrol (serial::flowcontrol_t flowcontrol)
 {
   flowcontrol_ = flowcontrol;
   if (is_open_) {
-    reconfigurePort ();
+	reconfigurePort ();
   }
 }
 
@@ -496,7 +496,7 @@ void
 Serial::SerialImpl::flush ()
 {
   if (is_open_ == false) {
-    throw PortNotOpenedException ("Serial::flush");
+	throw PortNotOpenedException ("Serial::flush");
   }
   FlushFileBuffers (fd_);
 }
@@ -505,7 +505,7 @@ void
 Serial::SerialImpl::flushInput ()
 {
   if (is_open_ == false) {
-    throw PortNotOpenedException("Serial::flushInput");
+	throw PortNotOpenedException("Serial::flushInput");
   }
   PurgeComm(fd_, PURGE_RXCLEAR);
 }
@@ -514,7 +514,7 @@ void
 Serial::SerialImpl::flushOutput ()
 {
   if (is_open_ == false) {
-    throw PortNotOpenedException("Serial::flushOutput");
+	throw PortNotOpenedException("Serial::flushOutput");
   }
   PurgeComm(fd_, PURGE_TXCLEAR);
 }
@@ -529,12 +529,12 @@ void
 Serial::SerialImpl::setBreak (bool level)
 {
   if (is_open_ == false) {
-    throw PortNotOpenedException ("Serial::setBreak");
+	throw PortNotOpenedException ("Serial::setBreak");
   }
   if (level) {
-    EscapeCommFunction (fd_, SETBREAK);
+	EscapeCommFunction (fd_, SETBREAK);
   } else {
-    EscapeCommFunction (fd_, CLRBREAK);
+	EscapeCommFunction (fd_, CLRBREAK);
   }
 }
 
@@ -542,12 +542,12 @@ void
 Serial::SerialImpl::setRTS (bool level)
 {
   if (is_open_ == false) {
-    throw PortNotOpenedException ("Serial::setRTS");
+	throw PortNotOpenedException ("Serial::setRTS");
   }
   if (level) {
-    EscapeCommFunction (fd_, SETRTS);
+	EscapeCommFunction (fd_, SETRTS);
   } else {
-    EscapeCommFunction (fd_, CLRRTS);
+	EscapeCommFunction (fd_, CLRRTS);
   }
 }
 
@@ -555,12 +555,12 @@ void
 Serial::SerialImpl::setDTR (bool level)
 {
   if (is_open_ == false) {
-    throw PortNotOpenedException ("Serial::setDTR");
+	throw PortNotOpenedException ("Serial::setDTR");
   }
   if (level) {
-    EscapeCommFunction (fd_, SETDTR);
+	EscapeCommFunction (fd_, SETDTR);
   } else {
-    EscapeCommFunction (fd_, CLRDTR);
+	EscapeCommFunction (fd_, CLRDTR);
   }
 }
 
@@ -568,21 +568,21 @@ bool
 Serial::SerialImpl::waitForChange ()
 {
   if (is_open_ == false) {
-    throw PortNotOpenedException ("Serial::waitForChange");
+	throw PortNotOpenedException ("Serial::waitForChange");
   }
   DWORD dwCommEvent;
 
   if (!SetCommMask(fd_, EV_CTS | EV_DSR | EV_RING | EV_RLSD)) {
-    // Error setting communications mask
-    return false;
+	// Error setting communications mask
+	return false;
   }
 
   if (!WaitCommEvent(fd_, &dwCommEvent, NULL)) {
-    // An error occurred waiting for the event.
-    return false;
+	// An error occurred waiting for the event.
+	return false;
   } else {
-    // Event has occurred.
-    return true;
+	// Event has occurred.
+	return true;
   }
 }
 
@@ -590,11 +590,11 @@ bool
 Serial::SerialImpl::getCTS ()
 {
   if (is_open_ == false) {
-    throw PortNotOpenedException ("Serial::getCTS");
+	throw PortNotOpenedException ("Serial::getCTS");
   }
   DWORD dwModemStatus;
   if (!GetCommModemStatus(fd_, &dwModemStatus)) {
-    THROW (IOException, "Error getting the status of the CTS line.");
+	THROW (IOException, "Error getting the status of the CTS line.");
   }
 
   return (MS_CTS_ON & dwModemStatus) != 0;
@@ -604,11 +604,11 @@ bool
 Serial::SerialImpl::getDSR ()
 {
   if (is_open_ == false) {
-    throw PortNotOpenedException ("Serial::getDSR");
+	throw PortNotOpenedException ("Serial::getDSR");
   }
   DWORD dwModemStatus;
   if (!GetCommModemStatus(fd_, &dwModemStatus)) {
-    THROW (IOException, "Error getting the status of the DSR line.");
+	THROW (IOException, "Error getting the status of the DSR line.");
   }
 
   return (MS_DSR_ON & dwModemStatus) != 0;
@@ -618,11 +618,11 @@ bool
 Serial::SerialImpl::getRI()
 {
   if (is_open_ == false) {
-    throw PortNotOpenedException ("Serial::getRI");
+	throw PortNotOpenedException ("Serial::getRI");
   }
   DWORD dwModemStatus;
   if (!GetCommModemStatus(fd_, &dwModemStatus)) {
-    THROW (IOException, "Error getting the status of the RI line.");
+	THROW (IOException, "Error getting the status of the RI line.");
   }
 
   return (MS_RING_ON & dwModemStatus) != 0;
@@ -632,12 +632,12 @@ bool
 Serial::SerialImpl::getCD()
 {
   if (is_open_ == false) {
-    throw PortNotOpenedException ("Serial::getCD");
+	throw PortNotOpenedException ("Serial::getCD");
   }
   DWORD dwModemStatus;
   if (!GetCommModemStatus(fd_, &dwModemStatus)) {
-    // Error in GetCommModemStatus;
-    THROW (IOException, "Error getting the status of the CD line.");
+	// Error in GetCommModemStatus;
+	THROW (IOException, "Error getting the status of the CD line.");
   }
 
   return (MS_RLSD_ON & dwModemStatus) != 0;
@@ -647,7 +647,7 @@ void
 Serial::SerialImpl::readLock()
 {
   if (WaitForSingleObject(read_mutex, INFINITE) != WAIT_OBJECT_0) {
-    THROW (IOException, "Error claiming read mutex.");
+	THROW (IOException, "Error claiming read mutex.");
   }
 }
 
@@ -655,7 +655,7 @@ void
 Serial::SerialImpl::readUnlock()
 {
   if (!ReleaseMutex(read_mutex)) {
-    THROW (IOException, "Error releasing read mutex.");
+	THROW (IOException, "Error releasing read mutex.");
   }
 }
 
@@ -663,7 +663,7 @@ void
 Serial::SerialImpl::writeLock()
 {
   if (WaitForSingleObject(write_mutex, INFINITE) != WAIT_OBJECT_0) {
-    THROW (IOException, "Error claiming write mutex.");
+	THROW (IOException, "Error claiming write mutex.");
   }
 }
 
@@ -671,19 +671,19 @@ void
 Serial::SerialImpl::writeUnlock()
 {
   if (!ReleaseMutex(write_mutex)) {
-    THROW (IOException, "Error releasing write mutex.");
+	THROW (IOException, "Error releasing write mutex.");
   }
 }
 
 void Serial::SerialImpl::clearErrors()
 {
-    DWORD errors = 0;
-    auto success = ClearCommError(fd_, &errors, nullptr);
-    assert(success);
+	DWORD errors = 0;
+	auto success = ClearCommError(fd_, &errors, nullptr);
+	assert(success);
 
-    success = ClearCommBreak(fd_);
-    assert(success);
-    (void)success;
+	success = ClearCommBreak(fd_);
+	assert(success);
+	(void)success;
 }
 
 
