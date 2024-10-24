@@ -106,6 +106,8 @@ Serial::SerialImpl::open ()
 
 	  // If there is an error and it is ERROR_ACCESS_DENIED, try again a couple times
 	  if (fd_ != INVALID_HANDLE_VALUE) {
+		  break;
+	  } else {
 		  create_file_err = GetLastError();
 		  if (create_file_err != ERROR_ACCESS_DENIED)
 			break;
